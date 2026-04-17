@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stock AI Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111820;
+    --border: #1e2d3d;
+    --accent: #00d4ff;
+    --accent2: #00ff9d;
+    --warn: #ff6b35;
+    --text: #cdd6f4;
+    --muted: #6b7fa3;
+    --up: #00ff9d;
+    --down: #ff4d6d;
+    --card: #131c26;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 10% 20%, rgba(0,212,255,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(0,255,157,0.03) 0%, transparent 50%);
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(17,24,32,0.8);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--accent); letter-spacing: 0.05em; }
+  .logo span { color: var(--accent2); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* Search Box */
+  .search-section {
+    margin-bottom: 1.5rem;
+  }
+  .search-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .search-row {
+    display: flex;
+    gap: 0.6rem;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input::placeholder {
+    color: var(--muted);
+    font-weight: 400;
+    text-transform: none;
+  }
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+  }
+  .search-go-btn {
+    padding: 0.85rem 1.4rem;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .search-go-btn:hover {
+    background: rgba(0,212,255,0.2);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-text { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; }
+
+  .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+  .stock-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 0.9rem 1rem; border-radius: 8px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; transition: all 0.2s; text-align: left; }
+  .stock-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
+  .stock-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); box-shadow: 0 0 16px rgba(0,212,255,0.1); }
+  .stock-btn .ticker { font-weight: 600; font-size: 1rem; display: block; margin-bottom: 2px; }
+  .stock-btn .name { font-size: 0.7rem; opacity: 0.6; font-family: 'Sarabun', sans-serif; }
+  .analyze-btn { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 8px; color: #0a0e14; font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.95rem; cursor: pointer; margin-bottom: 2rem; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.05em; }
+  .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .result { display: none; }
+  .result.show { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .price-header { display: flex; align-items: flex-end; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .price-main { font-family: 'IBM Plex Mono', monospace; font-size: 2.8rem; font-weight: 600; color: var(--text); line-height: 1; }
+  .price-change { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; padding: 0.3rem 0.8rem; border-radius: 6px; }
+  .price-change.up { background: rgba(0,255,157,0.12); color: var(--up); }
+  .price-change.down { background: rgba(255,77,109,0.12); color: var(--down); }
+  .ticker-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; }
+  .card-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .card-title::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid rgba(30,45,61,0.5); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { font-size: 0.82rem; color: var(--muted); }
+  .metric-value { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; color: var(--text); font-weight: 600; }
+  .support-tag, .resist-tag { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 4px; margin: 0.2rem; }
+  .support-tag { background: rgba(0,255,157,0.1); color: var(--up); border: 1px solid rgba(0,255,157,0.2); }
+  .resist-tag { background: rgba(255,77,109,0.1); color: var(--down); border: 1px solid rgba(255,77,109,0.2); }
+  .ai-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; border-left: 3px solid var(--accent); }
+  .ai-card .card-title { color: var(--accent2); }
+  .ai-card .card-title::before { background: var(--accent2); }
+  .ai-text { font-size: 0.92rem; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+  .ai-text strong { color: var(--accent); }
+  .news-list { display: flex; flex-direction: column; gap: 0.6rem; }
+  .news-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; transition: border-color 0.2s; }
+  .news-item:hover { border-color: var(--accent); }
+  .news-title { font-size: 0.88rem; color: var(--text); margin-bottom: 0.3rem; line-height: 1.4; }
+  .news-title a { color: inherit; text-decoration: none; }
+  .news-title a:hover { color: var(--accent); }
+  .news-meta { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+  .loading { display: none; text-align: center; padding: 3rem; }
+  .loading.show { display: block; }
+  .spinner { width: 40px; height: 40px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--muted); }
+  .warning-box { background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2); border-radius: 8px; padding: 0.8rem 1rem; font-size: 0.8rem; color: var(--warn); margin-bottom: 1.5rem; font-family: 'IBM Plex Mono', monospace; }
+  .rsi-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 0.4rem; position: relative; overflow: visible; }
+  .rsi-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--up), var(--warn), var(--down)); }
+  .rsi-indicator { position: absolute; top: -3px; width: 12px; height: 12px; background: white; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--accent); }
+  .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin: 1.5rem 0 0.75rem; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; font-weight: 600; }
+  .badge-buy { background: rgba(0,255,157,0.12); color: var(--up); }
+  .badge-sell { background: rgba(255,77,109,0.12); color: var(--down); }
+  .badge-hold { background: rgba(255,107,53,0.12); color: var(--warn); }
+  .badge-neutral { background: rgba(107,127,163,0.12); color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="status-dot"></div>
+  <div class="logo">STOCK<span>AI</span>.ANALYZER</div>
+</header>
+<div class="main">
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-label">🔍 ค้นหาหุ้นใดก็ได้</div>
+    <div class="search-row">
+      <input
+        class="search-input"
+        id="searchInput"
+        type="text"
+        placeholder="พิมพ์ ticker เช่น AAPL, TSLA, GOOGL..."
+        maxlength="10"
+        onkeydown="if(event.key==='Enter') searchAndAnalyze()"
+      />
+      <button class="search-go-btn" onclick="searchAndAnalyze()">ANALYZE →</button>
+    </div>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-text">หรือเลือกจากรายการ</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="stock-grid" id="stockGrid"></div>
+  <button class="analyze-btn" id="analyzeBtn" disabled onclick="analyze()">เลือกหุ้นที่ต้องการวิเคราะห์</button>
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">กำลังดึงข้อมูลและวิเคราะห์...</div>
+  </div>
+  <div class="result" id="result"></div>
+</div>
+
+<script>
+const API = "http://localhost:8000";
+let selectedTicker = null;
+let stocks = [];
+
+async function loadStocks() {
+  try {
+    const res = await fetch(`${API}/api/stocks`);
+    const data = await res.json();
+    stocks = data.stocks;
+    renderStockGrid();
+  } catch (e) {
+    console.error("Cannot connect to backend:", e);
+  }
+}
+
+function renderStockGrid() {
+  const grid = document.getElementById("stockGrid");
+  grid.innerHTML = stocks.map(s => `
+    <button class="stock-btn" onclick="selectStock('${s.ticker}', '${s.name}')" id="btn-${s.ticker}">
+      <span class="ticker">${s.ticker}</span>
+      <span class="name">${s.name}</span>
+    </button>
+  `).join("");
+}
+
+function selectStock(ticker, name) {
+  selectedTicker = ticker;
+  // clear search input
+  document.getElementById("searchInput").value = "";
+  document.querySelectorAll(".stock-btn").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById(`btn-${ticker}`);
+  if (btn) btn.classList.add("active");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = `วิเคราะห์ ${ticker} →`;
+}
+
+function searchAndAnalyze() {
+  const input = document.getElementById("searchInput");
+  const ticker = input.value.trim().toUpperCase();
+  if (!ticker) return;
+
+  // clear default stock selection
+  document.querySelectorAll(".stock-btn").forEach(b => b.classList.remove("active"));
+  selectedTicker = ticker;
+  runAnalysis(ticker);
+}
+
+async function analyze() {
+  if (!selectedTicker) return;
+  runAnalysis(selectedTicker);
+}
+
+async function runAnalysis(ticker) {
+  const loadingText = document.getElementById("loadingText");
+  loadingText.textContent = `กำลังดึงข้อมูล ${ticker} และวิเคราะห์...`;
+  document.getElementById("loading").classList.add("show");
+  document.getElementById("result").classList.remove("show");
+  document.getElementById("analyzeBtn").disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/analyze/${ticker}`);
+    const data = await res.json();
+    renderResult(data);
+  } catch (e) {
+    document.getElementById("result").innerHTML = `<div class="warning-box">❌ ไม่สามารถเชื่อมต่อ backend ได้ หรือไม่พบหุ้น "${ticker}"</div>`;
+    document.getElementById("result").classList.add("show");
+  }
+
+  document.getElementById("loading").classList.remove("show");
+  document.getElementById("analyzeBtn").disabled = false;
+  document.getElementById("analyzeBtn").textContent = selectedTicker
+    ? `วิเคราะห์ ${selectedTicker} →`
+    : "เลือกหุ้นที่ต้องการวิเคราะห์";
+}
+
+function val(v, prefix="", suffix="", fallback="-") {
+  return (v !== null && v !== undefined) ? `${prefix}${v}${suffix}` : fallback;
+}
+
+function recoBadge(rec) {
+  if (!rec) return '<span class="badge badge-neutral">N/A</span>';
+  const r = rec.toLowerCase();
+  if (r.includes("buy") || r.includes("strong_buy")) return `<span class="badge badge-buy">${rec.toUpperCase()}</span>`;
+  if (r.includes("sell")) return `<span class="badge badge-sell">${rec.toUpperCase()}</span>`;
+  if (r.includes("hold")) return `<span class="badge badge-hold">${rec.toUpperCase()}</span>`;
+  return `<span class="badge badge-neutral">${rec.toUpperCase()}</span>`;
+}
+
+function renderResult(data) {
+  if (data.error) {
+    document.getElementById("result").innerHTML = `<div class="warning-box">❌ ${data.error}</div>`;
+    document.getElementById("result").classList.add("show");
+    return;
+  }
+
+  const t = data.technical;
+  const f = data.fundamental || {};
+  const inc = f.income || {};
+  const bal = f.balance_sheet || {};
+  const valuation = f.valuation || {};
+  const pro = f.profitability || {};
+  const per = f.per_share || {};
+  const ana = f.analyst || {};
+  const isUp = t.change_pct >= 0;
+  const rsi = t.rsi || 50;
+
+  const supportTags = (t.supports || []).map(s => `<span class="support-tag">$${s}</span>`).join("") || '<span style="color:var(--muted);font-size:0.8rem">ไม่พบ</span>';
+  const resistTags = (t.resistances || []).map(r => `<span class="resist-tag">$${r}</span>`).join("") || '<span style="color:var(--muted);font-size:0.8rem">ไม่พบ</span>';
+
+  const newsHTML = (data.news || []).length > 0
+    ? data.news.map(n => `
+        <div class="news-item">
+          <div class="news-title"><a href="${n.link}" target="_blank">${n.title}</a></div>
+          <div class="news-meta">${n.source} · ${n.published}</div>
+        </div>`).join("")
+    : '<div class="news-item"><div class="news-title" style="color:var(--muted)">ไม่พบข่าวในช่วงนี้</div></div>';
+
+  const aiFormatted = (data.ai_analysis || "").replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  const companyLabel = data.company ? `${data.company} · ${data.ticker}` : data.ticker;
+
+  document.getElementById("result").innerHTML = `
+    <div class="ticker-label">${companyLabel}</div>
+    <div class="price-header">
+      <div class="price-main">$${t.current_price}</div>
+      <div class="price-change ${isUp ? 'up' : 'down'}">${isUp ? '▲' : '▼'} ${Math.abs(t.change_pct)}% ($${Math.abs(t.change)})</div>
+    </div>
+
+    <div class="warning-box">⚠️ การวิเคราะห์นี้เป็นข้อมูลประกอบเท่านั้น ไม่ใช่คำแนะนำการลงทุน</div>
+
+    <div class="section-title">Technical Analysis</div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Price & Momentum</div>
+        <div class="metric-row"><span class="metric-label">MA20</span><span class="metric-value">${val(t.ma20,'$')}</span></div>
+        <div class="metric-row"><span class="metric-label">MA50</span><span class="metric-value">${val(t.ma50,'$')}</span></div>
+        <div class="metric-row"><span class="metric-label">MA200</span><span class="metric-value">${val(t.ma200,'$')}</span></div>
+        <div class="metric-row"><span class="metric-label">52W High</span><span class="metric-value" style="color:var(--up)">$${t.week52_high}</span></div>
+        <div class="metric-row"><span class="metric-label">52W Low</span><span class="metric-value" style="color:var(--down)">$${t.week52_low}</span></div>
+        <div class="metric-row" style="flex-direction:column;align-items:flex-start;gap:0.4rem">
+          <span class="metric-label">RSI: ${rsi}</span>
+          <div class="rsi-bar">
+            <div class="rsi-fill" style="width:${Math.min(rsi,100)}%"></div>
+            <div class="rsi-indicator" style="left:${Math.min(rsi,100)}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Volume & Levels</div>
+        <div class="metric-row"><span class="metric-label">Volume วันนี้</span><span class="metric-value">${(t.current_volume/1e6).toFixed(2)}M</span></div>
+        <div class="metric-row"><span class="metric-label">Volume เฉลี่ย</span><span class="metric-value">${(t.avg_volume/1e6).toFixed(2)}M</span></div>
+        <div class="metric-row"><span class="metric-label">สัดส่วน</span><span class="metric-value" style="color:${t.volume_ratio>1.5?'var(--warn)':'var(--text)'}">${t.volume_ratio}x ${t.volume_ratio>1.5?'🔥':''}</span></div>
+        <div style="margin-top:0.8rem">
+          <div style="font-size:0.75rem;color:var(--up);margin-bottom:0.3rem">แนวรับ</div>
+          <div>${supportTags}</div>
+        </div>
+        <div style="margin-top:0.8rem">
+          <div style="font-size:0.75rem;color:var(--down);margin-bottom:0.3rem">แนวต้าน</div>
+          <div>${resistTags}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Fundamental Analysis</div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">รายได้ & กำไร</div>
+        <div class="metric-row"><span class="metric-label">รายได้รวม</span><span class="metric-value">${val(inc.revenue_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">กำไรขั้นต้น</span><span class="metric-value">${val(inc.gross_profit_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">กำไรสุทธิ</span><span class="metric-value">${val(inc.net_income_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">EBITDA</span><span class="metric-value">${val(inc.ebitda_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">Revenue Growth</span><span class="metric-value" style="color:${inc.revenue_growth_pct>0?'var(--up)':'var(--down)'}">${val(inc.revenue_growth_pct,'','%')}</span></div>
+        <div class="metric-row"><span class="metric-label">Earnings Growth</span><span class="metric-value" style="color:${inc.earnings_growth_pct>0?'var(--up)':'var(--down)'}">${val(inc.earnings_growth_pct,'','%')}</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">งบดุล & สภาพคล่อง</div>
+        <div class="metric-row"><span class="metric-label">เงินสด</span><span class="metric-value">${val(bal.total_cash_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">หนี้สินรวม</span><span class="metric-value">${val(bal.total_debt_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">Current Ratio</span><span class="metric-value" style="color:${bal.current_ratio>=1.5?'var(--up)':bal.current_ratio>=1?'var(--warn)':'var(--down)'}">${val(bal.current_ratio)}</span></div>
+        <div class="metric-row"><span class="metric-label">D/E Ratio</span><span class="metric-value">${val(bal.debt_to_equity)}</span></div>
+        <div class="metric-row"><span class="metric-label">Book Value/Share</span><span class="metric-value">${val(bal.book_value,'$')}</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Valuation</div>
+        <div class="metric-row"><span class="metric-label">Market Cap</span><span class="metric-value">${val(valuation.market_cap_b,'$','B')}</span></div>
+        <div class="metric-row"><span class="metric-label">P/E (Trailing)</span><span class="metric-value">${val(valuation.pe_ratio)}</span></div>
+        <div class="metric-row"><span class="metric-label">P/E (Forward)</span><span class="metric-value">${val(valuation.forward_pe)}</span></div>
+        <div class="metric-row"><span class="metric-label">PEG Ratio</span><span class="metric-value">${val(valuation.peg_ratio)}</span></div>
+        <div class="metric-row"><span class="metric-label">P/S Ratio</span><span class="metric-value">${val(valuation.ps_ratio)}</span></div>
+        <div class="metric-row"><span class="metric-label">P/B Ratio</span><span class="metric-value">${val(valuation.pb_ratio)}</span></div>
+        <div class="metric-row"><span class="metric-label">EV/EBITDA</span><span class="metric-value">${val(valuation.ev_ebitda)}</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Profitability & Analyst</div>
+        <div class="metric-row"><span class="metric-label">Gross Margin</span><span class="metric-value">${val(pro.gross_margin_pct,'','%')}</span></div>
+        <div class="metric-row"><span class="metric-label">Net Margin</span><span class="metric-value">${val(pro.net_margin_pct,'','%')}</span></div>
+        <div class="metric-row"><span class="metric-label">ROE</span><span class="metric-value">${val(pro.roe_pct,'','%')}</span></div>
+        <div class="metric-row"><span class="metric-label">ROA</span><span class="metric-value">${val(pro.roa_pct,'','%')}</span></div>
+        <div class="metric-row"><span class="metric-label">EPS (Trailing)</span><span class="metric-value">${val(per.eps_trailing,'$')}</span></div>
+        <div class="metric-row"><span class="metric-label">EPS (Forward)</span><span class="metric-value">${val(per.eps_forward,'$')}</span></div>
+        <div class="metric-row"><span class="metric-label">Dividend Yield</span><span class="metric-value">${val(per.dividend_yield_pct,'','%')}</span></div>
+        <div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border)">
+          <div class="metric-row"><span class="metric-label">Consensus</span><span class="metric-value">${recoBadge(ana.recommendation)}</span></div>
+          <div class="metric-row"><span class="metric-label">Price Target</span><span class="metric-value" style="color:var(--accent2)">${val(ana.target_mean,'$')}</span></div>
+          <div class="metric-row"><span class="metric-label">Target Range</span><span class="metric-value" style="font-size:0.78rem">${val(ana.target_low,'$')} – ${val(ana.target_high,'$')}</span></div>
+          <div class="metric-row"><span class="metric-label">นักวิเคราะห์</span><span class="metric-value">${val(ana.analyst_count,'',' คน')}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-card">
+      <div class="card-title">AI Analysis</div>
+      <div class="ai-text">${aiFormatted}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">ข่าวล่าสุด</div>
+      <div class="news-list">${newsHTML}</div>
+    </div>
+  `;
+  document.getElementById("result").classList.add("show");
+  document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+}
+
+loadStocks();
+</script>
+</body>
+</html>
+
+<!-- 
+cd stock-ai-analyzer\backend
+python -m uvicorn main:app --reload -->
