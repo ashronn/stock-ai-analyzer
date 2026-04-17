@@ -16,8 +16,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://stock-ai-analyzer-jet.vercel.app/", # วาง URL ที่ก๊อปมา (ลบ / ตัวสุดท้ายออกด้วยนะครับ)
-        "http://localhost:5500"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
